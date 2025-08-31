@@ -8,11 +8,10 @@
         <groupId>ru.practicum</groupId>
         <artifactId>explore-with-me</artifactId>
         <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>ru.practicum</groupId>
     <artifactId>ewm-statistic-service</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -20,34 +19,4 @@
         <module>ewm-stats-dto</module>
         <module>ewm-stats-service</module>
     </modules>
-
-    <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring.boot.version>2.7.10</spring.boot.version>
-    </properties>
-    <dependencies>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
-    </dependencies>
-
-    <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-maven-plugin</artifactId>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-    </build>
 </project>

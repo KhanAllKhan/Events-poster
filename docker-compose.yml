@@ -1,42 +1,77 @@
-version: "3.8"
-
 services:
+  # База данных для статистики
   stats-db:
     image: postgres:13-alpine
     container_name: stats-db
     environment:
-      POSTGRES_DB:       stats_db
-      POSTGRES_USER:     admin
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: stats
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust  # ← ДОБАВЬТЕ ЭТУ СТРОЧКУ!
     volumes:
       - stats_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL","pg_isready -U admin -d stats_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d stats"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # База данных для основного сервиса
+  ewm-db:
+    image: postgres:13-alpine
+    container_name: ewm-db
+    environment:
+      POSTGRES_DB: explore_with_me
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust  # ← ДОБАВЬТЕ ЭТУ СТРОЧКУ!
+    volumes:
+      - ewm_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d explore_with_me"]
       interval: 5s
       timeout: 5s
       retries: 5
     ports:
       - "5432:5432"
 
+  # Сервис статистики
   stats-server:
     build:
-      context: .
+      context: .  # ← ИЗМЕНИТЕ КОНТЕКСТ!
       dockerfile: ewm-statistic-service/ewm-stats-service/Dockerfile
     container_name: stats-server
     depends_on:
       stats-db:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL:         jdbc:postgresql://stats-db:5432/stats_db
-      SPRING_DATASOURCE_USERNAME:    admin
-      SPRING_DATASOURCE_PASSWORD:    password
-
-      # Hibernate создаст таблицы по вашим @Entity
-      SPRING_SQL_INIT_MODE:          never
-      SPRING_JPA_HIBERNATE_DDL_AUTO: create
-
+      SPRING_DATASOURCE_URL: jdbc:postgresql://stats-db:5432/stats
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     ports:
       - "9090:9090"
 
+  # Основной сервис
+  ewm-service:
+    build:
+      context: ewm-service
+      dockerfile: Dockerfile
+    container_name: ewm-service
+    depends_on:
+      ewm-db:
+        condition: service_healthy
+      stats-server:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://ewm-db:5432/explore_with_me
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVICES_STATS_SERVICE_URI: http://stats-server:9090
+    ports:
+      - "8080:8080"
+
 volumes:
   stats_data:
+  ewm_data:

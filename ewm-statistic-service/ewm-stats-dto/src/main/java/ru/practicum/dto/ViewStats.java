@@ -2,13 +2,13 @@ package ru.practicum.dto;
 
 import lombok.*;
 
-@Getter
-@Setter
+@Data
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class StatResponseDto {
+@ToString
+public class ViewStats {
     private String app;
     private String uri;
-    private long hits;
+    private Long hits;
 }
-

@@ -1,13 +1,15 @@
 package ru.practicum;
 
+import ru.practicum.dto.EndpointHit;
+import ru.practicum.dto.ViewStats;
+import ru.practicum.dto.ViewsStatsRequest;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.time.LocalDateTime;
 import java.util.List;
 
-public interface StatRepository extends JpaRepository<Stat, Long> {
-    List<Stat> findByDateBetween(LocalDateTime start, LocalDateTime end);
+public interface StatRepository {
+    void saveHit(EndpointHit hit);
 
-    List<Stat> findByUriInAndDateBetween(List<String> uris, LocalDateTime start, LocalDateTime end);
+    List<ViewStats> getStats(ViewsStatsRequest request);
+
+    List<ViewStats> getUniqueStats(ViewsStatsRequest request);
 }

@@ -2,32 +2,49 @@ package ru.practicum;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
-import ru.practicum.dto.HitRequestDto;
-import ru.practicum.dto.StatResponseDto;
+import ru.practicum.dto.EndpointHit;
+import ru.practicum.dto.ViewStats;
+import ru.practicum.dto.ViewsStatsRequest;
 
+import java.security.InvalidParameterException;
+import java.time.LocalDateTime;
 import java.util.List;
 
-@RestController
 @Slf4j
+@RestController
 @RequiredArgsConstructor
-@RequestMapping
+@RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
 public class StatController {
-
-    private final StatService statsService;
+    private final StatService service;
 
     @PostMapping("/hit")
-    public void recordHit(@RequestBody HitRequestDto hitRequestDto) {
-        log.info("Получен запрос POST /hit: {}", hitRequestDto);
-        statsService.recordRequest(hitRequestDto);
+    @ResponseStatus(code = HttpStatus.CREATED)
+    public void hit(@RequestBody EndpointHit hit) {
+        log.info("POST request to save information.");
+        service.saveHit(hit);
     }
 
     @GetMapping("/stats")
-    public List<StatResponseDto> getStats(@RequestParam String start,
-                                          @RequestParam String end,
-                                          @RequestParam(required = false) List<String> uris,
-                                          @RequestParam(defaultValue = "false") boolean unique) {
-        log.info("Получен запрос GET /stats со start={}, end={}, uris={}, unique={}", start, end, uris, unique);
-        return statsService.getStats(start, end, uris, unique);
+    public List<ViewStats> getStats(@RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime start,
+                                    @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime end,
+                                    @RequestParam(defaultValue = "") List<String> uris,
+                                    @RequestParam(defaultValue = "false") boolean unique) {
+        log.info("GET request to get all statistic.");
+        if (end.isBefore(start)) {
+            log.info("Uncorrected format of dates start {} и end {}", start, end);
+            throw new InvalidParameterException("Uncorrected format of dates");
+        }
+        return service.getViewStatsList(
+                ViewsStatsRequest.builder()
+                        .start(start)
+                        .end(end)
+                        .uris(uris)
+                        .unique(unique)
+                        .build()
+        );
     }
 }
