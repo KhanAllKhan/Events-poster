@@ -35,7 +35,8 @@ public class PrivateCommentController {
     public CommentDto getComment(@PathVariable @Min(1) Long userId,
                                  @PathVariable @Min(1) Long commentId) {
         log.info("GET request to get comment {} by user {}", commentId, userId);
-        return commentService.getCommentById(commentId);
+        // вернёт 404, если пользователь не найден или комментарий не принадлежит ему
+        return commentService.getCommentByUser(userId, commentId);
     }
 
     @PatchMapping("/{commentId}")
@@ -56,7 +57,7 @@ public class PrivateCommentController {
 
     @GetMapping
     public List<CommentDto> getUserComments(@PathVariable @Min(1) Long userId) {
-        log.info("GET request for comments by user {}", userId);
+        log.info("GET request for all comments by user {}", userId);
         return commentService.getCommentsByUserId(userId);
     }
 

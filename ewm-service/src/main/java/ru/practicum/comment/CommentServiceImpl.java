@@ -46,6 +46,17 @@ public class CommentServiceImpl implements CommentService {
         Comment savedComment = commentRepository.save(comment);
         return CommentMapper.toCommentDto(savedComment);
     }
+    @Override
+    public CommentDto getCommentByUser(Long userId, Long commentId) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User with id=" + userId + " not found"));
+
+        Comment comment = commentRepository.findByIdAndAuthorId(commentId, userId)
+                .orElseThrow(() -> new NotFoundException(
+                        "Comment with id=" + commentId + " not found for user id=" + userId));
+
+        return CommentMapper.toCommentDto(comment);
+    }
 
     @Override
     public List<CommentDto> searchCommentsByText(String text, Integer from, Integer size) {
