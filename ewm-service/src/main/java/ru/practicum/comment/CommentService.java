@@ -22,4 +22,8 @@ public interface CommentService {
     List<CommentDto> getCommentsByUserId(Long userId);
 
     List<CommentDto> getUserCommentsForEvent(Long userId, Long eventId);
+
+    List<CommentDto> searchCommentsByText(String text, Integer from, Integer size);
+
+    Long getCommentsCountForEvent(Long eventId);
 }

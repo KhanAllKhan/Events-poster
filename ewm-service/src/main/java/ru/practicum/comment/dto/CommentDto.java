@@ -1,8 +1,8 @@
 package ru.practicum.comment.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
-import ru.practicum.user.dto.UserResponseDto;
 
 import java.time.LocalDateTime;
 
@@ -13,15 +13,18 @@ import java.time.LocalDateTime;
 @Builder
 public class CommentDto {
     private Long id;
-    private String content;
-    private UserResponseDto author;
+    private String text;
+
+    @JsonProperty("authorId")
+    private Long authorId;
+
     private Long eventId;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime createdDate;
+    private LocalDateTime created;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime updatedDate;
+    private LocalDateTime updated;
 
     private Boolean isEdited;
 }

@@ -2,26 +2,24 @@ package ru.practicum.comment;
 
 import lombok.experimental.UtilityClass;
 import ru.practicum.comment.dto.CommentDto;
-import ru.practicum.comment.dto.NewCommentDto;
-import ru.practicum.user.UserMapper;
 
 @UtilityClass
 public class CommentMapper {
     public CommentDto toCommentDto(Comment comment) {
         return CommentDto.builder()
                 .id(comment.getId())
-                .content(comment.getContent())
-                .author(UserMapper.toUserShortDto(comment.getAuthor()))
+                .text(comment.getContent())
+                .authorId(comment.getAuthor().getId())
                 .eventId(comment.getEvent().getId())
-                .createdDate(comment.getCreatedDate())
-                .updatedDate(comment.getUpdatedDate())
+                .created(comment.getCreatedDate())
+                .updated(comment.getUpdatedDate())
                 .isEdited(comment.getIsEdited())
                 .build();
     }
 
-    public Comment toComment(NewCommentDto newCommentDto) {
+    public Comment toComment(ru.practicum.comment.dto.NewCommentDto newCommentDto) {
         return Comment.builder()
-                .content(newCommentDto.getContent())
+                .content(newCommentDto.getText())
                 .isEdited(false)
                 .build();
     }

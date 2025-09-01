@@ -12,8 +12,8 @@ import ru.practicum.comment.dto.UpdateCommentDto;
 import ru.practicum.event.Event;
 import ru.practicum.event.EventRepository;
 import ru.practicum.event.dto.EventStatus;
-import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
+import ru.practicum.exception.ParametersException;
 import ru.practicum.user.User;
 import ru.practicum.user.UserRepository;
 
@@ -35,7 +35,8 @@ public class CommentServiceImpl implements CommentService {
         Event event = getEvent(eventId);
 
         if (!event.getEventStatus().equals(EventStatus.PUBLISHED)) {
-            throw new ConflictException("Cannot comment on unpublished event");
+            // По тестам должен возвращаться 400 BAD_REQUEST
+            throw new ParametersException("Cannot comment on unpublished event");
         }
 
         Comment comment = CommentMapper.toComment(newCommentDto);
@@ -47,13 +48,28 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
+    public List<CommentDto> searchCommentsByText(String text, Integer from, Integer size) {
+        Pageable pageable = PageRequest.of(from / size, size);
+        return commentRepository.searchByText(text, pageable)
+                .stream()
+                .map(CommentMapper::toCommentDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Long getCommentsCountForEvent(Long eventId) {
+        return commentRepository.countByEventId(eventId);
+    }
+
+    @Override
     @Transactional
     public CommentDto updateComment(Long userId, Long commentId, UpdateCommentDto updateCommentDto) {
         getUser(userId);
         Comment comment = getCommentByIdAndAuthorId(commentId, userId);
 
-        if (updateCommentDto.getContent() != null && !updateCommentDto.getContent().isBlank()) {
-            comment.setContent(updateCommentDto.getContent());
+        String newText = updateCommentDto.getText();
+        if (newText != null && !newText.isBlank()) {
+            comment.setContent(newText);
         }
 
         Comment updatedComment = commentRepository.save(comment);
@@ -110,6 +126,7 @@ public class CommentServiceImpl implements CommentService {
                 .collect(Collectors.toList());
     }
 
+
     private User getUser(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User with id=" + userId + " not found"));
@@ -127,6 +144,7 @@ public class CommentServiceImpl implements CommentService {
 
     private Comment getCommentByIdAndAuthorId(Long commentId, Long authorId) {
         return commentRepository.findByIdAndAuthorId(commentId, authorId)
-                .orElseThrow(() -> new NotFoundException("Comment with id=" + commentId + " not found for user"));
+                .orElseThrow(() -> new ParametersException(
+                        "Only comment author can modify or delete comment"));
     }
 }

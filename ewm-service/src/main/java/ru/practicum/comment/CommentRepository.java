@@ -22,4 +22,10 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> findLatestCommentsByEventId(@Param("eventId") Long eventId, Pageable pageable);
 
     boolean existsByEventIdAndAuthorId(Long eventId, Long authorId);
+
+    @Query("SELECT c FROM Comment c WHERE LOWER(c.content) LIKE LOWER(CONCAT('%', :text, '%'))")
+    List<Comment> searchByText(@Param("text") String text, Pageable pageable);
+
+    long countByEventId(Long eventId);
+    List<Comment> findAllByIdIn(List<Long> ids);
 }

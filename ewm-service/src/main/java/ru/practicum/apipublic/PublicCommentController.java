@@ -19,13 +19,7 @@ import java.util.List;
 public class PublicCommentController {
     private final CommentService commentService;
 
-    @GetMapping("/{commentId}")
-    public CommentDto getComment(@PathVariable @Positive Long commentId) {
-        log.info("GET request for comment {}", commentId);
-        return commentService.getCommentById(commentId);
-    }
-
-    @GetMapping("/events/{eventId}")
+    @GetMapping("/{eventId}")
     public List<CommentDto> getEventComments(@PathVariable @Positive Long eventId,
                                              @RequestParam(defaultValue = "0") @PositiveOrZero Integer from,
                                              @RequestParam(defaultValue = "10") @Positive Integer size) {

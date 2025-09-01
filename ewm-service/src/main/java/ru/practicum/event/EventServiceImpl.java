@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import ru.practicum.StatClient;
 import ru.practicum.category.Category;
 import ru.practicum.category.CategoryRepository;
+import ru.practicum.comment.CommentService;
 import ru.practicum.dto.EndpointHit;
 import ru.practicum.dto.ViewStats;
 import ru.practicum.dto.ViewsStatsRequest;
@@ -47,11 +48,10 @@ public class EventServiceImpl implements EventService {
     private final RequestRepository requestRepository;
     private final LocationRepository locationRepository;
     private final ObjectMapper objectMapper;
-
+    private final CommentService commentService;
 
     @Value("${server.application.name:ewm-service}")
     private String applicationName;
-
 
     @Override
     public List<EventFullDtoForAdmin> getAllEventFromAdmin(SearchEventParamsAdmin searchEventParamsAdmin) {
@@ -116,11 +116,15 @@ public class EventServiceImpl implements EventService {
                 ));
 
         return eventList.stream()
-                .map(event -> EventMapper.toEventFullDtoForAdmin(
-                        event,
-                        confirmedRequestsMap.getOrDefault(event.getId(), List.of()).size(),
-                        viewsMap.getOrDefault(event.getId(), 0L)
-                ))
+                .map(event -> {
+                    Long commentsCount = commentService.getCommentsCountForEvent(event.getId());
+                    return EventMapper.toEventFullDtoForAdmin(
+                            event,
+                            confirmedRequestsMap.getOrDefault(event.getId(), List.of()).size(),
+                            viewsMap.getOrDefault(event.getId(), 0L),
+                            commentsCount
+                    );
+                })
                 .collect(Collectors.toList());
     }
 
@@ -162,7 +166,9 @@ public class EventServiceImpl implements EventService {
         if (hasChanges) {
             eventAfterUpdate = eventRepository.save(eventForUpdate);
         }
-        return eventAfterUpdate != null ? EventMapper.toEventFullDto(eventAfterUpdate) : null;
+
+        Long commentsCount = commentService.getCommentsCountForEvent(eventId);
+        return eventAfterUpdate != null ? EventMapper.toEventFullDto(eventAfterUpdate, commentsCount) : null;
     }
 
     @Override
@@ -206,7 +212,8 @@ public class EventServiceImpl implements EventService {
             eventAfterUpdate = eventRepository.save(eventForUpdate);
         }
 
-        return eventAfterUpdate != null ? EventMapper.toEventFullDto(eventAfterUpdate) : null;
+        Long commentsCount = commentService.getCommentsCountForEvent(eventId);
+        return eventAfterUpdate != null ? EventMapper.toEventFullDto(eventAfterUpdate, commentsCount) : null;
     }
 
     @Override
@@ -215,16 +222,23 @@ public class EventServiceImpl implements EventService {
             throw new NotFoundException("Пользователь с id= " + userId + " не найден");
         }
         PageRequest pageRequest = PageRequest.of(from / size, size,
-                org.springframework.data.domain.Sort.by(Sort.Direction.ASC, "id"));
+                Sort.by(Sort.Direction.ASC, "id"));
+
         return eventRepository.findAll(pageRequest).getContent()
-                .stream().map(EventMapper::toEventShortDto).collect(Collectors.toList());
+                .stream()
+                .map(event -> {
+                    Long commentsCount = commentService.getCommentsCountForEvent(event.getId());
+                    return EventMapper.toEventShortDto(event, commentsCount);
+                })
+                .collect(Collectors.toList());
     }
 
     @Override
     public EventDto getEventByUserIdAndEventId(Long userId, Long eventId) {
         checkUser(userId);
         Event event = checkEvenByInitiatorAndEventId(userId, eventId);
-        return EventMapper.toEventFullDto(event);
+        Long commentsCount = commentService.getCommentsCountForEvent(eventId);
+        return EventMapper.toEventFullDto(event, commentsCount);
     }
 
     @Override
@@ -244,7 +258,8 @@ public class EventServiceImpl implements EventService {
         }
         Event eventSaved = eventRepository.save(event);
 
-        EventDto eventFullDto = EventMapper.toEventFullDto(eventSaved);
+        // Для нового события комментариев еще нет
+        EventDto eventFullDto = EventMapper.toEventFullDto(eventSaved, 0L);
         eventFullDto.setViews(0L);
         eventFullDto.setConfirmedRequests(0);
         return eventFullDto;
@@ -365,8 +380,15 @@ public class EventServiceImpl implements EventService {
                 criteriaBuilder.equal(root.get("eventStatus"), EventStatus.PUBLISHED));
 
         List<Event> resultEvents = eventRepository.findAll(specification, pageable).getContent();
-        List<EventShortDto> result = resultEvents
-                .stream().map(EventMapper::toEventShortDto).collect(Collectors.toList());
+
+        // Добавляем количество комментариев для каждого события
+        List<EventShortDto> result = resultEvents.stream()
+                .map(event -> {
+                    Long commentsCount = commentService.getCommentsCountForEvent(event.getId());
+                    return EventMapper.toEventShortDto(event, commentsCount);
+                })
+                .collect(Collectors.toList());
+
         Map<Long, Long> viewStatsMap = getViewsAllEvents(resultEvents);
 
         for (EventShortDto event : result) {
@@ -384,7 +406,10 @@ public class EventServiceImpl implements EventService {
             throw new NotFoundException("Событие с id = " + eventId + " не опубликовано");
         }
         addStatsClient(request);
-        EventDto eventDto = EventMapper.toEventFullDto(event);
+
+        Long commentsCount = commentService.getCommentsCountForEvent(eventId);
+        EventDto eventDto = EventMapper.toEventFullDto(event, commentsCount);
+
         Map<Long, Long> viewStatsMap = getViewsAllEvents(List.of(event));
         Long views = viewStatsMap.getOrDefault(event.getId(), 0L);
         eventDto.setViews(views);
@@ -558,7 +583,6 @@ public class EventServiceImpl implements EventService {
             hasChanges = true;
         }
         if (!hasChanges) {
-
             oldEvent = null;
         }
         return oldEvent;

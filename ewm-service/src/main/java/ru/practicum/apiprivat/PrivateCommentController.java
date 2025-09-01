@@ -17,8 +17,8 @@ import java.util.List;
 @Slf4j
 @Validated
 @RestController
+@RequestMapping("/comments/users/{userId}")
 @RequiredArgsConstructor
-@RequestMapping("/users/{userId}/comments")
 public class PrivateCommentController {
     private final CommentService commentService;
 
@@ -29,6 +29,13 @@ public class PrivateCommentController {
                                  @RequestBody @Valid NewCommentDto newCommentDto) {
         log.info("POST request to add comment from user {} to event {}", userId, eventId);
         return commentService.addComment(userId, eventId, newCommentDto);
+    }
+
+    @GetMapping("/{commentId}")
+    public CommentDto getComment(@PathVariable @Min(1) Long userId,
+                                 @PathVariable @Min(1) Long commentId) {
+        log.info("GET request to get comment {} by user {}", commentId, userId);
+        return commentService.getCommentById(commentId);
     }
 
     @PatchMapping("/{commentId}")

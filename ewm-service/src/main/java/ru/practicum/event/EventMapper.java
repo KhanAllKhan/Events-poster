@@ -26,7 +26,7 @@ public class EventMapper {
                 .build();
     }
 
-    public EventDto toEventFullDto(Event event) {
+    public EventDto toEventFullDto(Event event, Long commentsCount) {
         return EventDto.builder()
                 .id(event.getId())
                 .annotation(event.getAnnotation())
@@ -42,12 +42,13 @@ public class EventMapper {
                 .requestModeration(event.isRequestModeration())
                 .state(event.getEventStatus())
                 .title(event.getTitle())
-                .confirmedRequests(0)  // временное значение, перезапишется позже
-                .views(0L)             // тоже будет перезаписано
+                .comments(commentsCount)  // Добавляем количество комментариев
+                .confirmedRequests(0)
+                .views(0L)
                 .build();
     }
 
-    public EventShortDto toEventShortDto(Event event) {
+    public EventShortDto toEventShortDto(Event event, Long commentsCount) {
         return EventShortDto.builder()
                 .id(event.getId())
                 .annotation(event.getAnnotation())
@@ -56,10 +57,11 @@ public class EventMapper {
                 .initiator(UserMapper.toUserShortDto(event.getInitiator()))
                 .paid(event.isPaid())
                 .title(event.getTitle())
+                .comments(commentsCount)  // Добавляем количество комментариев
                 .build();
     }
 
-    public EventFullDtoForAdmin toEventFullDtoForAdmin(Event event, int confirmedRequests, long views) {
+    public EventFullDtoForAdmin toEventFullDtoForAdmin(Event event, int confirmedRequests, long views, Long commentsCount) {
         return EventFullDtoForAdmin.builder()
                 .id(event.getId())
                 .annotation(event.getAnnotation())
@@ -77,11 +79,12 @@ public class EventMapper {
                 .title(event.getTitle())
                 .confirmedRequests(confirmedRequests)
                 .views(views)
+                .comments(commentsCount)
                 .build();
     }
 
     public List<EventShortDto> eventToEventShortDtoList(List<Event> events) {
         return events == null ? new ArrayList<>() :
-                events.stream().map(EventMapper::toEventShortDto).collect(Collectors.toList());
+                events.stream().map(event -> toEventShortDto(event, 0L)).collect(Collectors.toList());
     }
 }
