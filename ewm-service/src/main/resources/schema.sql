@@ -74,3 +74,20 @@ CREATE TABLE IF NOT EXISTS compilations_to_event
     CONSTRAINT fk_event_compilation_to_event FOREIGN KEY (event_id) REFERENCES events (id) ON UPDATE CASCADE,
     CONSTRAINT fk_event_compilation_to_compilation FOREIGN KEY (compilation_id) REFERENCES compilations (id) ON UPDATE CASCADE
     );
+
+CREATE TABLE IF NOT EXISTS comments (
+        id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        content VARCHAR(2000) NOT NULL,
+        author_id BIGINT NOT NULL,
+        event_id BIGINT NOT NULL,
+        created_date TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+        updated_date TIMESTAMP WITHOUT TIME ZONE,
+        is_edited BOOLEAN NOT NULL DEFAULT false,
+        CONSTRAINT fk_comment_to_user FOREIGN KEY (author_id) REFERENCES users (id) ON DELETE CASCADE,
+        CONSTRAINT fk_comment_to_event FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
+    );
+
+
+    CREATE INDEX IF NOT EXISTS idx_comments_event_id ON comments(event_id);
+
+    CREATE INDEX IF NOT EXISTS idx_comments_author_id ON comments(author_id);
