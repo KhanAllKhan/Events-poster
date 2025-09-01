@@ -1,4 +1,4 @@
-package ru.practicum.comments;
+package ru.practicum.comment;
 
 import lombok.*;
 import ru.practicum.event.Event;
