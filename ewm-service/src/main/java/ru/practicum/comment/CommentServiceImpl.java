@@ -90,8 +90,18 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional
     public void deleteComment(Long userId, Long commentId) {
-        getUser(userId);
-        Comment comment = getCommentByIdAndAuthorId(commentId, userId);
+        userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new NotFoundException("User with id=" + userId + " not found")
+                );
+
+        Comment comment = commentRepository
+                .findByIdAndAuthorId(commentId, userId)
+                .orElseThrow(() ->
+                        new NotFoundException("Comment with id=" + commentId +
+                                " not found for user id=" + userId)
+                );
+
         commentRepository.delete(comment);
     }
 
