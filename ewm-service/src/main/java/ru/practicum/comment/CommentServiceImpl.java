@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.comment.dto.CommentDto;
 import ru.practicum.comment.dto.NewCommentDto;
 import ru.practicum.comment.dto.UpdateCommentDto;
+import ru.practicum.comment.exception.BadRequestException;
 import ru.practicum.event.Event;
 import ru.practicum.event.EventRepository;
 import ru.practicum.event.dto.EventStatus;
@@ -90,18 +91,27 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional
     public void deleteComment(Long userId, Long commentId) {
+        // 1) Проверяем существование пользователя — иначе 404
         userRepository.findById(userId)
                 .orElseThrow(() ->
                         new NotFoundException("User with id=" + userId + " not found")
                 );
 
-        Comment comment = commentRepository
-                .findByIdAndAuthorId(commentId, userId)
+        // 2) Ищем комментарий по id — иначе 404
+        Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() ->
-                        new NotFoundException("Comment with id=" + commentId +
-                                " not found for user id=" + userId)
+                        new NotFoundException("Comment with id=" + commentId + " not found")
                 );
 
+        // 3) Проверяем, что текущий пользователь — автор, иначе 400
+        if (!comment.getAuthor().getId().equals(userId)) {
+            throw new BadRequestException(
+                    "Only comment author can modify or delete comment",
+                    "Incorrect parameters"
+            );
+        }
+
+        // 4) Всё ок — удаляем
         commentRepository.delete(comment);
     }
 
