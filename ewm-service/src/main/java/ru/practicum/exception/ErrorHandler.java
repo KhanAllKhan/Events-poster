@@ -10,28 +10,52 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import ru.practicum.comment.exception.BadRequestException;
 
 @RestControllerAdvice
 @Slf4j
 public class ErrorHandler {
 
-    @ExceptionHandler
+    /**
+     * 404 NOT_FOUND — битые ссылки, фейковые id и т.п.
+     */
+    @ExceptionHandler(NotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ApiError handleNotFoundException(NotFoundException e) {
-        log.debug("Получен статус 404 NOT_FOUND {}", e.getMessage(), e);
+        log.debug("404 NOT_FOUND: {}", e.getMessage(), e);
         return ApiError.builder()
                 .status(HttpStatus.NOT_FOUND.toString())
                 .message(e.getMessage())
                 .reason("The required object was not found.")
+                // timestamp заполняется по @Builder.Default
                 .build();
     }
 
-
-    @ExceptionHandler({MethodArgumentNotValidException.class, ParametersException.class, MethodArgumentTypeMismatchException.class,
-            MissingServletRequestParameterException.class})
+    /**
+     * 400 BAD_REQUEST — ваши BadRequestException (когда коммент есть, но не ваш),
+     * плюс валидационные ошибки Spring (MethodArgumentNotValid и т.п.)
+     */
+    @ExceptionHandler(BadRequestException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ApiError handlerIncorrectParametersException(Exception e) {
-        log.debug("Получен статус 400 BAD_REQUEST {}", e.getMessage(), e);
+    public ApiError handleBadRequestException(BadRequestException e) {
+        log.debug("400 BAD_REQUEST (custom): {}", e.getMessage(), e);
+        return ApiError.builder()
+                .status(HttpStatus.BAD_REQUEST.toString())
+                .message(e.getMessage())
+                .reason(e.getReason())
+                .errors(null)
+                .build();
+    }
+
+    @ExceptionHandler({
+            MethodArgumentNotValidException.class,
+            ParametersException.class,
+            MethodArgumentTypeMismatchException.class,
+            MissingServletRequestParameterException.class
+    })
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiError handleValidationErrors(Exception e) {
+        log.debug("400 BAD_REQUEST (validation): {}", e.getMessage(), e);
         return ApiError.builder()
                 .status(HttpStatus.BAD_REQUEST.toString())
                 .message(e.getMessage())
@@ -39,10 +63,17 @@ public class ErrorHandler {
                 .build();
     }
 
-    @ExceptionHandler({PSQLException.class, ConflictException.class, DataIntegrityViolationException.class})
+    /**
+     * 409 CONFLICT — дубли, нарушения связей в БД и т.д.
+     */
+    @ExceptionHandler({
+            PSQLException.class,
+            ConflictException.class,
+            DataIntegrityViolationException.class
+    })
     @ResponseStatus(HttpStatus.CONFLICT)
-    public ApiError handlerValidationException(Exception e) {
-        log.debug("Получен статус 409 CONFLICT {}", e.getMessage());
+    public ApiError handleConflictException(Exception e) {
+        log.debug("409 CONFLICT: {}", e.getMessage(), e);
         return ApiError.builder()
                 .status(HttpStatus.CONFLICT.toString())
                 .message(e.getMessage())
@@ -50,11 +81,13 @@ public class ErrorHandler {
                 .build();
     }
 
-
-    @ExceptionHandler
+    /**
+     * Любое другое исключение → 500 INTERNAL_SERVER_ERROR
+     */
+    @ExceptionHandler(Throwable.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ApiError handlerOtherException(Throwable e) {
-        log.warn("Получен статус 500 SERVER_ERROR {}", e.getMessage(), e);
+    public ApiError handleOtherException(Throwable e) {
+        log.warn("500 INTERNAL_SERVER_ERROR: {}", e.getMessage(), e);
         return ApiError.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.toString())
                 .message(e.getMessage())

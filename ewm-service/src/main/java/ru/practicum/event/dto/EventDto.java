@@ -33,4 +33,5 @@ public class EventDto {
     private EventStatus state;
     private String title;
     private Long views;
+    private Long comments;
 }

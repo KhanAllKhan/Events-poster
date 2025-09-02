@@ -35,4 +35,5 @@ public class EventFullDtoForAdmin {
     private EventStatus state;
     private String title;
     private Long views;
+    private Long comments;
 }
