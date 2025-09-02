@@ -27,5 +27,9 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> searchByText(@Param("text") String text, Pageable pageable);
 
     long countByEventId(Long eventId);
+
     List<Comment> findAllByIdIn(List<Long> ids);
+
+    @Query("SELECT c.event.id, COUNT(c) FROM Comment c WHERE c.event.id IN :eventIds GROUP BY c.event.id")
+    List<Object[]> countByEventIdIn(@Param("eventIds") List<Long> eventIds);
 }

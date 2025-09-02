@@ -47,7 +47,6 @@ public class EventServiceImpl implements EventService {
     private final StatClient statsClient;
     private final RequestRepository requestRepository;
     private final LocationRepository locationRepository;
-    private final ObjectMapper objectMapper;
     private final CommentService commentService;
 
     @Value("${server.application.name:ewm-service}")
@@ -115,16 +114,18 @@ public class EventServiceImpl implements EventService {
                         ViewStats::getHits
                 ));
 
+        // ОПТИМИЗИРОВАНО: один запрос для всех количеств комментариев
+        Map<Long, Long> commentsCountMap = commentService.getCommentCountsForEvents(
+                eventList.stream().map(Event::getId).collect(Collectors.toList())
+        );
+
         return eventList.stream()
-                .map(event -> {
-                    Long commentsCount = commentService.getCommentsCountForEvent(event.getId());
-                    return EventMapper.toEventFullDtoForAdmin(
-                            event,
-                            confirmedRequestsMap.getOrDefault(event.getId(), List.of()).size(),
-                            viewsMap.getOrDefault(event.getId(), 0L),
-                            commentsCount
-                    );
-                })
+                .map(event -> EventMapper.toEventFullDtoForAdmin(
+                        event,
+                        confirmedRequestsMap.getOrDefault(event.getId(), List.of()).size(),
+                        viewsMap.getOrDefault(event.getId(), 0L),
+                        commentsCountMap.getOrDefault(event.getId(), 0L)
+                ))
                 .collect(Collectors.toList());
     }
 
@@ -167,7 +168,8 @@ public class EventServiceImpl implements EventService {
             eventAfterUpdate = eventRepository.save(eventForUpdate);
         }
 
-        Long commentsCount = commentService.getCommentsCountForEvent(eventId);
+        // Для одного события используем getCommentCountForEvent
+        Long commentsCount = commentService.getCommentCountForEvent(eventId);
         return eventAfterUpdate != null ? EventMapper.toEventFullDto(eventAfterUpdate, commentsCount) : null;
     }
 
@@ -212,7 +214,8 @@ public class EventServiceImpl implements EventService {
             eventAfterUpdate = eventRepository.save(eventForUpdate);
         }
 
-        Long commentsCount = commentService.getCommentsCountForEvent(eventId);
+        // Для одного события используем getCommentCountForEvent
+        Long commentsCount = commentService.getCommentCountForEvent(eventId);
         return eventAfterUpdate != null ? EventMapper.toEventFullDto(eventAfterUpdate, commentsCount) : null;
     }
 
@@ -224,12 +227,18 @@ public class EventServiceImpl implements EventService {
         PageRequest pageRequest = PageRequest.of(from / size, size,
                 Sort.by(Sort.Direction.ASC, "id"));
 
-        return eventRepository.findAll(pageRequest).getContent()
-                .stream()
-                .map(event -> {
-                    Long commentsCount = commentService.getCommentsCountForEvent(event.getId());
-                    return EventMapper.toEventShortDto(event, commentsCount);
-                })
+        List<Event> events = eventRepository.findAll(pageRequest).getContent();
+
+        // ОПТИМИЗИРОВАНО: один запрос для всех количеств комментариев
+        Map<Long, Long> commentsCountMap = commentService.getCommentCountsForEvents(
+                events.stream().map(Event::getId).collect(Collectors.toList())
+        );
+
+        return events.stream()
+                .map(event -> EventMapper.toEventShortDto(
+                        event,
+                        commentsCountMap.getOrDefault(event.getId(), 0L)
+                ))
                 .collect(Collectors.toList());
     }
 
@@ -237,7 +246,9 @@ public class EventServiceImpl implements EventService {
     public EventDto getEventByUserIdAndEventId(Long userId, Long eventId) {
         checkUser(userId);
         Event event = checkEvenByInitiatorAndEventId(userId, eventId);
-        Long commentsCount = commentService.getCommentsCountForEvent(eventId);
+
+        // Для одного события используем getCommentCountForEvent
+        Long commentsCount = commentService.getCommentCountForEvent(eventId);
         return EventMapper.toEventFullDto(event, commentsCount);
     }
 
@@ -258,7 +269,7 @@ public class EventServiceImpl implements EventService {
         }
         Event eventSaved = eventRepository.save(event);
 
-        // Для нового события комментариев еще нет
+        // Для нового события комментариев еще нет - используем прямое значение 0
         EventDto eventFullDto = EventMapper.toEventFullDto(eventSaved, 0L);
         eventFullDto.setViews(0L);
         eventFullDto.setConfirmedRequests(0);
@@ -381,12 +392,16 @@ public class EventServiceImpl implements EventService {
 
         List<Event> resultEvents = eventRepository.findAll(specification, pageable).getContent();
 
-        // Добавляем количество комментариев для каждого события
+        // ОПТИМИЗИРОВАНО: один запрос для всех количеств комментариев
+        Map<Long, Long> commentsCountMap = commentService.getCommentCountsForEvents(
+                resultEvents.stream().map(Event::getId).collect(Collectors.toList())
+        );
+
         List<EventShortDto> result = resultEvents.stream()
-                .map(event -> {
-                    Long commentsCount = commentService.getCommentsCountForEvent(event.getId());
-                    return EventMapper.toEventShortDto(event, commentsCount);
-                })
+                .map(event -> EventMapper.toEventShortDto(
+                        event,
+                        commentsCountMap.getOrDefault(event.getId(), 0L)
+                ))
                 .collect(Collectors.toList());
 
         Map<Long, Long> viewStatsMap = getViewsAllEvents(resultEvents);
@@ -407,7 +422,8 @@ public class EventServiceImpl implements EventService {
         }
         addStatsClient(request);
 
-        Long commentsCount = commentService.getCommentsCountForEvent(eventId);
+        // Для одного события используем getCommentCountForEvent
+        Long commentsCount = commentService.getCommentCountForEvent(eventId);
         EventDto eventDto = EventMapper.toEventFullDto(event, commentsCount);
 
         Map<Long, Long> viewStatsMap = getViewsAllEvents(List.of(event));

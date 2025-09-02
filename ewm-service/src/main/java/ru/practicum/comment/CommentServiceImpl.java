@@ -19,6 +19,7 @@ import ru.practicum.user.User;
 import ru.practicum.user.UserRepository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,6 +48,7 @@ public class CommentServiceImpl implements CommentService {
         Comment savedComment = commentRepository.save(comment);
         return CommentMapper.toCommentDto(savedComment);
     }
+
     @Override
     public CommentDto getCommentByUser(Long userId, Long commentId) {
         userRepository.findById(userId)
@@ -69,8 +71,23 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
-    public Long getCommentsCountForEvent(Long eventId) {
+    public Long getCommentCountForEvent(Long eventId) {
         return commentRepository.countByEventId(eventId);
+    }
+
+    @Override
+    public Map<Long, Long> getCommentCountsForEvents(List<Long> eventIds) {
+        if (eventIds == null || eventIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Object[]> counts = commentRepository.countByEventIdIn(eventIds);
+
+        return counts.stream()
+                .collect(Collectors.toMap(
+                        result -> (Long) result[0], // eventId
+                        result -> (Long) result[1]  // count
+                ));
     }
 
     @Override
